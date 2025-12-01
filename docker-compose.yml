@@ -1,0 +1,49 @@
+version: '3'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: santo_req
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d santo_req"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DB_NAME: santo_req
+      DB_USER: admin
+      DB_PASSWORD: password
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+  postgrest:
+    image: postgrest/postgrest
+    ports:
+      - "3000:3000"
+    environment:
+      PGRST_DB_URI: postgres://admin:password@db:5432/santo_req
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: admin
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+
